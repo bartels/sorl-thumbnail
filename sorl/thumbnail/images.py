@@ -32,14 +32,26 @@ def serialize_image_file(image_file):
     return json.dumps(data)
 
 
-def deserialize_image_file(s):
-    data = deserialize(s)
+storage_instances = {}
+
+
+def get_storage_instance(storage_cls):
+    if storage_cls in storage_instances:
+        return storage_instances[storage_cls]
 
     class LazyStorage(LazyObject):
         def _setup(self):
-            self._wrapped = get_module_class(data['storage'])()
+            self._wrapped = get_module_class(storage_cls)()
 
-    image_file = ImageFile(data['name'], LazyStorage())
+    storage = LazyStorage()
+    storage_instances[storage_cls] = storage
+    return storage
+
+
+def deserialize_image_file(s):
+    data = deserialize(s)
+    storage = get_storage_instance(data['storage'])
+    image_file = ImageFile(data['name'], storage)
     image_file.set_size(data['size'])
     return image_file
 
